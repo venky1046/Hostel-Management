@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,12 +22,26 @@
     <form id="loginForm">
       <div class="mb-3">
         <label class="form-label">Username</label>
-        <input type="text" class="form-control" id="username" value="admin" required>
+        <input
+          type="text"
+          class="form-control"
+          id="username"
+          autocomplete="username"
+          required
+        >
       </div>
+
       <div class="mb-3">
         <label class="form-label">Password</label>
-        <input type="password" class="form-control" id="password" value="admin123" required>
+        <input
+          type="password"
+          class="form-control"
+          id="password"
+          autocomplete="current-password"
+          required
+        >
       </div>
+
       <button type="submit" class="btn btn-accent w-100 py-2 mt-2">
         <i class="fa-solid fa-right-to-bracket me-1"></i> Sign in
       </button>
@@ -37,11 +52,12 @@
 <script>
 document.getElementById('loginForm').addEventListener('submit', function (e) {
   e.preventDefault();
+
   const u = document.getElementById('username').value.trim();
   const p = document.getElementById('password').value.trim();
   const errBox = document.getElementById('loginError');
 
-  // Demo-only front-end check (no backend auth table in this project).
+  // Demo-only front-end check
   if (u === 'admin' && p === 'admin123') {
     localStorage.setItem('hms_logged_in', 'true');
     window.location.href = 'dashboard.html';
@@ -51,5 +67,7 @@ document.getElementById('loginForm').addEventListener('submit', function (e) {
   }
 });
 </script>
+
 </body>
 </html>
+```
