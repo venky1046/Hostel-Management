@@ -90,8 +90,11 @@ exports.getStudentById = async (req, res) => {
 };
 
 // POST /api/students  -> creates student AND its fee record automatically
+// POST /api/students
+// Creates student AND automatically creates fee record
 exports.createStudent = async (req, res) => {
   const connection = await db.getConnection();
+
   try {
     const {
       register_no,
@@ -107,6 +110,7 @@ exports.createStudent = async (req, res) => {
       room_preference,
     } = req.body;
 
+    // Required field validation
     if (
       !register_no ||
       !student_name ||
@@ -116,31 +120,51 @@ exports.createStudent = async (req, res) => {
       !mobile ||
       !room_preference
     ) {
-      return res
-        .status(400)
-        .json({ message: "Please fill all required fields." });
+      return res.status(400).json({
+        message: "Please fill all required fields.",
+      });
     }
+
+    // Check room preference
     if (!FEE_BY_PREFERENCE[room_preference]) {
-      return res.status(400).json({ message: "Invalid room preference." });
+      return res.status(400).json({
+        message: "Invalid room preference.",
+      });
     }
 
     await connection.beginTransaction();
 
+    // Check duplicate register number
     const [existing] = await connection.query(
       "SELECT id FROM students WHERE register_no = ?",
       [register_no],
     );
+
     if (existing.length > 0) {
       await connection.rollback();
-      return res
-        .status(409)
-        .json({ message: `Register number ${register_no} already exists.` });
+
+      return res.status(409).json({
+        message: `Register number ${register_no} already exists.`,
+      });
     }
 
+    // Insert student
     const [result] = await connection.query(
       `INSERT INTO students
-        (register_no, student_name, gender, department, year, mobile, parent_mobile, email, address, reservation_7_5, room_preference)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (
+        register_no,
+        student_name,
+        gender,
+        department,
+        year,
+        mobile,
+        parent_mobile,
+        email,
+        address,
+        reservation_7_5,
+        room_preference
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         register_no,
         student_name,
@@ -157,32 +181,43 @@ exports.createStudent = async (req, res) => {
     );
 
     const studentId = result.insertId;
+
+    // Fee based on room preference
     const totalFee = FEE_BY_PREFERENCE[room_preference];
 
-    const paidAmount = 0;
-    const balance = totalFee - paidAmount;
-    const paymentStatus = "Pending";
-
+    // IMPORTANT:
+    // balance and payment_status are GENERATED columns.
+    // So we insert only student_id, total_fee and paid_amount.
     await connection.query(
       `INSERT INTO fees
-    (student_id, total_fee, paid_amount, balance, payment_status)
-   VALUES (?, ?, ?, ?, ?)`,
-      [studentId, totalFee, paidAmount, balance, paymentStatus],
+      (
+        student_id,
+        total_fee,
+        paid_amount
+      )
+      VALUES (?, ?, ?)`,
+      [studentId, totalFee, 0],
     );
 
     await connection.commit();
-    res.status(201).json({ message: "Student added successfully", studentId });
+
+    res.status(201).json({
+      message: "Student added successfully",
+      studentId: studentId,
+    });
   } catch (err) {
     await connection.rollback();
-    console.error(err);
-    res
-      .status(500)
-      .json({ message: "Failed to add student", error: err.message });
+
+    console.error("❌ Add Student Error:", err);
+
+    res.status(500).json({
+      message: "Failed to add student",
+      error: err.message,
+    });
   } finally {
     connection.release();
   }
 };
-
 // PUT /api/students/:id
 exports.updateStudent = async (req, res) => {
   try {
@@ -206,11 +241,9 @@ exports.updateStudent = async (req, res) => {
       [register_no, id],
     );
     if (existing.length > 0) {
-      return res
-        .status(409)
-        .json({
-          message: `Register number ${register_no} is already used by another student.`,
-        });
+      return res.status(409).json({
+        message: `Register number ${register_no} is already used by another student.`,
+      });
     }
 
     const [result] = await db.query(
